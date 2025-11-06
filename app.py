@@ -1,5 +1,3 @@
-# app.py - Vortex LTC Tracker Backend (Full, Fixed, Live Uptime + Bech32 + Bot Status)
-
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,41 +10,37 @@ app = FastAPI()
 # === CONFIG ===
 SUPABASE_URL = "https://enciwuvvqhnkkfourhkm.supabase.co"
 SUPABASE_KEY = "sb_publishable_6cA5-fNu24sHcHxENX474Q__oCrovZR"
-
 HEADERS = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
     "Content-Type": "application/json"
 }
 
-# === TEMPLATES & STATIC ===
+# === TEMPLATES ===
 templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="."), name="static")
 
-# === INDEX PAGE ===
+# === INDEX ===
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# === BOT STATUS (Live Uptime + Ping) ===
+# === BOT STATUS ===
 @app.get("/api/bot_status")
 async def get_bot_status():
     try:
-        async with httpx.AsyncClient() as client:
-            # Get latest status
+        async with httpx.AsyncClient(timeout=5.0) as client:
             status_res = await client.get(
                 f"{SUPABASE_URL}/rest/v1/bot_status?order=id.desc&limit=1",
                 headers=HEADERS
             )
             status = status_res.json()
             
-            # Get wallet count
             wallets_res = await client.get(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS)
             wallet_count = len(wallets_res.json())
 
             if status:
                 s = status[0]
-                # Fallback uptime if missing
                 if not s.get("uptime") or s["uptime"] == "0h 0m":
                     last_ping = s.get("last_ping")
                     if last_ping:
@@ -59,7 +53,6 @@ async def get_bot_status():
                 s["wallet_count"] = wallet_count
                 return [s]
             else:
-                # Default
                 return [{
                     "is_running": True,
                     "uptime": "0h 0m",
@@ -69,17 +62,17 @@ async def get_bot_status():
     except Exception as e:
         return [{"error": str(e)}]
 
-# === WALLETS (Live Balance + Bech32) ===
+# === WALLETS ===
 @app.get("/api/wallets")
 async def get_wallets():
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             res = await client.get(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS)
             wallets = res.json()
             enriched = []
             for w in wallets:
                 try:
-                    bal_res = await client.get(f"https://chain.so/api/v3/address/LTC/{w['address']}")
+                    bal_res = await client.get(f"https://chain.so/api/v3/address/LTC/{w['address']}", timeout=5.0)
                     balance = bal_res.json().get("data", {}).get("balance", 0)
                 except:
                     balance = 0
@@ -107,27 +100,25 @@ async def get_transactions():
     except Exception as e:
         return []
 
-# === ADD WALLET (Public Form) ===
+# === ADD WALLET ===
 @app.post("/api/add_wallet")
 async def add_wallet(data: dict):
     addr = data.get("address", "").strip()
     if not (addr.startswith('L') or addr.startswith('ltc1')):
-        return {"status": "error", "message": "Invalid address. Must start with L or ltc1"}
-    
-    payload = {
-        "address": addr,
-        "label": data.get("label", "Unnamed"),
-        "alert_min": float(data.get("min", 0.01)),
-        "username": "Website"
-    }
+        return {"status": "error", "message": "Invalid address"}
     try:
         async with httpx.AsyncClient() as client:
-            await client.post(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS, json=payload)
+            await client.post(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS, json={
+                "address": addr,
+                "label": data.get("label", "Unnamed"),
+                "alert_min": float(data.get("min", 0.01)),
+                "username": "Website"
+            })
         return {"status": "ok"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# === PUSH TX (From Bot) ===
+# === PUSH TX ===
 @app.post("/api/push-tx")
 async def push_tx(data: dict):
     try:
@@ -144,7 +135,7 @@ async def push_tx(data: dict):
     except Exception as e:
         return {"error": str(e)}
 
-# === HEALTH CHECK ===
+# === HEALTH ===
 @app.get("/health")
 async def health():
     return {"status": "ok", "time": datetime.now(timezone.utc).isoformat()}
