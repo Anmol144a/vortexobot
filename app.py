@@ -1,121 +1,133 @@
-# app.py
-from fastapi import FastAPI, Request, Form
+# app.py - Vortex LTC Tracker Backend (Full, Updated, Bech32 + Bot Status + Website Sync)
+
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from datetime import datetime, timedelta
+from fastapi.templating import Jinja2Templates
 import httpx
-import requests  # New: For CoinGecko price
+import os
+from datetime import datetime, timezone
 
 app = FastAPI()
 
-# Serve CSS
-app.mount("/static", StaticFiles(directory="."), name="static")
-
-# Templates
-templates = Jinja2Templates(directory="templates")
-
-# Supabase
+# === CONFIG ===
+VORTEX_URL = "https://vortex-panel-eight.vercel.app"
 SUPABASE_URL = "https://enciwuvvqhnkkfourhkm.supabase.co"
 SUPABASE_KEY = "sb_publishable_6cA5-fNu24sHcHxENX474Q__oCrovZR"
 
 HEADERS = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
-    "Content-Type": "application/json",
-    "Prefer": "return=minimal"
+    "Content-Type": "application/json"
 }
 
-# Get LTC price from CoinGecko
-def get_ltc_price():
-    try:
-        resp = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=litecoin&vs_currencies=usd")
-        return resp.json()["litecoin"]["usd"]
-    except:
-        return 0.0
+# === TEMPLATES & STATIC ===
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Ping endpoint
-@app.get("/ping")
-async def ping():
-    return {
-        "status": "alive",
-        "timestamp": datetime.utcnow().isoformat(),
-        "uptime": "99.9%",  # Placeholder; calculate from Supabase if needed
-        "response_time": "50ms"
-    }
+# === INDEX PAGE ===
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
-# Get wallet balance via SoChain API
-@app.get("/api/balance/{address}")
-async def get_balance(address: str):
+# === BOT STATUS ===
+@app.get("/api/bot_status")
+async def get_bot_status():
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.get(f"https://chain.so/api/v2/get_address_balance/LTC/{address}")
-            data = resp.json()
-            balance = data.get("data", {}).get("confirmed_balance", "0")
-            return {"balance": balance, "price_usd": get_ltc_price()}
+            status_res = await client.get(f"{SUPABASE_URL}/rest/v1/bot_status?order=id.desc&limit=1", headers=HEADERS)
+            wallets_res = await client.get(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS)
+            status = status_res.json()
+            wallet_count = len(wallets_res.json())
+            if status:
+                status[0]["wallet_count"] = wallet_count
+            return status
     except Exception as e:
-        return {"error": str(e)}
+        return JSONResponse({"error": str(e)}, status_code=500)
 
-# Update stats on tx receive
-@app.post("/api/tx")
-async def receive_tx(data: dict):
-    address = data.get("address")
-    if not address:
-        return JSONResponse({"status": "error", "error": "address required"}, status_code=400)
-
-    payload = {
-        "txid": data.get("txid") or "demo-tx",
-        "address": address,
-        "amount": str(data.get("amount") or "0"),
-        "timestamp": data.get("timestamp") or datetime.utcnow().isoformat()
-    }
-
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        await client.post(f"{SUPABASE_URL}/rest/v1/transactions", headers=HEADERS, json=payload)
-        await client.post(
-            f"{SUPABASE_URL}/rest/v1/wallets",
-            headers={**HEADERS, "Prefer": "resolution=merge-duplicates"},
-            json={
-                "user_id": "demo",
-                "label": data.get("label", "demo"),
-                "address": address,
-                "last_balance": payload["amount"]
-            }
-        )
-        # Update stats (increment users)
-        await client.patch(
-            f"{SUPABASE_URL}/rest/v1/stats?order=id.desc&limit=1",
-            headers=HEADERS,
-            json={"total_users": str(int((await client.get(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS)).json().__len__())), "last_update": datetime.utcnow().isoformat()}
-        )
-    return JSONResponse({"status": "ok"})
-
-# Dashboard with stats
-@app.get("/")
-async def dashboard(request: Request):
+# === WALLETS (with live balance) ===
+@app.get("/api/wallets")
+async def get_wallets():
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            wallets = (await client.get(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS)).json()
-            txs = (await client.get(f"{SUPABASE_URL}/rest/v1/transactions?order=id.desc&limit=20", headers=HEADERS)).json()
-            stats = (await client.get(f"{SUPABASE_URL}/rest/v1/stats?order=id.desc&limit=1", headers=HEADERS)).json()
+        async with httpx.AsyncClient() as client:
+            res = await client.get(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS)
+            wallets = res.json()
+            enriched = []
+            for w in wallets:
+                try:
+                    bal_res = await client.get(f"https://chain.so/api/v3/address/LTC/{w['address']}")
+                    balance = bal_res.json().get("data", {}).get("balance", 0)
+                except:
+                    balance = 0
+                enriched.append({
+                    "id": w.get("id"),
+                    "address": w["address"],
+                    "label": w.get("label", "Unnamed"),
+                    "alert_min": w.get("alert_min", 0.01),
+                    "username": w.get("username", "Anon"),
+                    "balance": float(balance)
+                })
+            return enriched
     except Exception as e:
-        print("Supabase error:", e)
-        wallets, txs, stats = [], [], [{"total_users": "0", "uptime": "0"}]
+        return JSONResponse({"error": str(e)}, status_code=500)
 
-    ltc_price = get_ltc_price()
-    total_ltc = sum(float(w.get("last_balance", 0)) for w in wallets)
-    total_usd = total_ltc * ltc_price
+# === TRANSACTIONS ===
+@app.get("/api/transactions")
+async def get_transactions():
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.get(f"{SUPABASE_URL}/rest/v1/transactions?order=timestamp.desc&limit=10", headers=HEADERS)
+            return res.json()
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
-    return templates.TemplateResponse("index.html", {
-        "request": request, "wallets": wallets, "txs": txs, "stats": stats[0] if stats else {},
-        "ltc_price": ltc_price, "total_ltc": total_ltc, "total_usd": total_usd
-    })
+# === ADD WALLET (Public Form) ===
+@app.post("/api/add_wallet")
+async def add_wallet(data: dict):
+    addr = data.get("address", "").strip()
+    if not (addr.startswith('L') or addr.startswith('ltc1')):
+        return {"status": "error", "message": "Invalid address. Must start with L or ltc1"}
+    
+    payload = {
+        "address": addr,
+        "label": data.get("label", "Unnamed"),
+        "alert_min": float(data.get("min", 0.01)),
+        "username": "Website User"  # Public form
+    }
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS, json=payload)
+        return {"status": "ok"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
-# Add wallet (unchanged)
-@app.post("/add_wallet")
-async def add_wallet(user_id: str = Form(...), label: str = Form(...), address: str = Form(...)):
-    async with httpx.AsyncClient() as client:
-        await client.post(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS, json={
-            "user_id": user_id, "label": label, "address": address, "last_balance": "0"
-        })
-    return JSONResponse({"status": "ok"})
+# === PUSH TX (from bot) ===
+@app.post("/api/push-tx")
+async def push_tx(data: dict):
+    try:
+        payload = {
+            "txid": data.get("txid"),
+            "address": data.get("address"),
+            "amount": data.get("amount"),
+            "from_addr": data.get("from_addr"),
+            "timestamp": data.get("timestamp")
+        }
+        async with httpx.AsyncClient() as client:
+            await client.post(f"{SUPABASE_URL}/rest/v1/transactions", headers=HEADERS, json=payload)
+        return {"status": "ok"}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+# === HEALTH CHECK ===
+@app.get("/health")
+async def health():
+    return {"status": "healthy", "time": datetime.now(timezone.utc).isoformat()}
+
+# === 404 ===
+@app.get("/favicon.ico")
+async def favicon():
+    return JSONResponse({})
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
