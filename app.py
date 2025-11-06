@@ -1,17 +1,15 @@
-# app.py - Vortex LTC Tracker Backend (Full, Updated, Bech32 + Bot Status + Website Sync)
+# app.py - Vortex LTC Tracker Backend (Full, Fixed, Live Uptime + Bech32 + Bot Status)
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import httpx
-import os
 from datetime import datetime, timezone
 
 app = FastAPI()
 
 # === CONFIG ===
-VORTEX_URL = "https://vortex-panel-eight.vercel.app"
 SUPABASE_URL = "https://enciwuvvqhnkkfourhkm.supabase.co"
 SUPABASE_KEY = "sb_publishable_6cA5-fNu24sHcHxENX474Q__oCrovZR"
 
@@ -30,22 +28,48 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# === BOT STATUS ===
+# === BOT STATUS (Live Uptime + Ping) ===
 @app.get("/api/bot_status")
 async def get_bot_status():
     try:
         async with httpx.AsyncClient() as client:
-            status_res = await client.get(f"{SUPABASE_URL}/rest/v1/bot_status?order=id.desc&limit=1", headers=HEADERS)
-            wallets_res = await client.get(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS)
+            # Get latest status
+            status_res = await client.get(
+                f"{SUPABASE_URL}/rest/v1/bot_status?order=id.desc&limit=1",
+                headers=HEADERS
+            )
             status = status_res.json()
+            
+            # Get wallet count
+            wallets_res = await client.get(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS)
             wallet_count = len(wallets_res.json())
-            if status:
-                status[0]["wallet_count"] = wallet_count
-            return status
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
 
-# === WALLETS (with live balance) ===
+            if status:
+                s = status[0]
+                # Fallback uptime if missing
+                if not s.get("uptime") or s["uptime"] == "0h 0m":
+                    last_ping = s.get("last_ping")
+                    if last_ping:
+                        delta = datetime.now(timezone.utc) - datetime.fromisoformat(last_ping.replace("Z", "+00:00"))
+                        h = int(delta.total_seconds() // 3600)
+                        m = int((delta.total_seconds() % 3600) // 60)
+                        s["uptime"] = f"{h}h {m}m"
+                    else:
+                        s["uptime"] = "0h 0m"
+                s["wallet_count"] = wallet_count
+                return [s]
+            else:
+                # Default
+                return [{
+                    "is_running": True,
+                    "uptime": "0h 0m",
+                    "last_ping": datetime.now(timezone.utc).isoformat(),
+                    "wallet_count": wallet_count
+                }]
+    except Exception as e:
+        return [{"error": str(e)}]
+
+# === WALLETS (Live Balance + Bech32) ===
 @app.get("/api/wallets")
 async def get_wallets():
     try:
@@ -60,7 +84,6 @@ async def get_wallets():
                 except:
                     balance = 0
                 enriched.append({
-                    "id": w.get("id"),
                     "address": w["address"],
                     "label": w.get("label", "Unnamed"),
                     "alert_min": w.get("alert_min", 0.01),
@@ -69,17 +92,20 @@ async def get_wallets():
                 })
             return enriched
     except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+        return []
 
 # === TRANSACTIONS ===
 @app.get("/api/transactions")
 async def get_transactions():
     try:
         async with httpx.AsyncClient() as client:
-            res = await client.get(f"{SUPABASE_URL}/rest/v1/transactions?order=timestamp.desc&limit=10", headers=HEADERS)
+            res = await client.get(
+                f"{SUPABASE_URL}/rest/v1/transactions?order=timestamp.desc&limit=10",
+                headers=HEADERS
+            )
             return res.json()
     except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+        return []
 
 # === ADD WALLET (Public Form) ===
 @app.post("/api/add_wallet")
@@ -92,7 +118,7 @@ async def add_wallet(data: dict):
         "address": addr,
         "label": data.get("label", "Unnamed"),
         "alert_min": float(data.get("min", 0.01)),
-        "username": "Website User"  # Public form
+        "username": "Website"
     }
     try:
         async with httpx.AsyncClient() as client:
@@ -101,7 +127,7 @@ async def add_wallet(data: dict):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# === PUSH TX (from bot) ===
+# === PUSH TX (From Bot) ===
 @app.post("/api/push-tx")
 async def push_tx(data: dict):
     try:
@@ -116,14 +142,14 @@ async def push_tx(data: dict):
             await client.post(f"{SUPABASE_URL}/rest/v1/transactions", headers=HEADERS, json=payload)
         return {"status": "ok"}
     except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+        return {"error": str(e)}
 
 # === HEALTH CHECK ===
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "time": datetime.now(timezone.utc).isoformat()}
+    return {"status": "ok", "time": datetime.now(timezone.utc).isoformat()}
 
-# === 404 ===
+# === FAVICON ===
 @app.get("/favicon.ico")
 async def favicon():
     return JSONResponse({})
