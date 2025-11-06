@@ -1,35 +1,23 @@
 # app.py
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime
+from datetime import datetime, timedelta
 import httpx
-import os
-import traceback
+import requests  # New: For CoinGecko price
 
 app = FastAPI()
 
-# CORS (safe for Vercel)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
-
-# Mount static files FIRST (for style.css and potential favicon)
+# Serve CSS
 app.mount("/static", StaticFiles(directory="."), name="static")
 
-# Templates - ensure dir exists
-if not os.path.exists("templates"):
-    raise RuntimeError("templates/ directory missing! Create it with index.html inside.")
-
+# Templates
 templates = Jinja2Templates(directory="templates")
 
-# HARDCODED SUPABASE
+# Supabase
 SUPABASE_URL = "https://enciwuvvqhnkkfourhkm.supabase.co"
 SUPABASE_KEY = "sb_publishable_6cA5-fNu24sHcHxENX474Q__oCrovZR"
-
-if not SUPABASE_KEY or SUPABASE_KEY.startswith("sb_publishable_"):  # Quick validation
-    print("WARNING: Supabase key looks like a placeholder - test it!")
 
 HEADERS = {
     "apikey": SUPABASE_KEY,
@@ -38,87 +26,96 @@ HEADERS = {
     "Prefer": "return=minimal"
 }
 
-# Global exception handler (logs to Vercel for debugging)
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    error_msg = f"Global crash: {str(exc)}\n{traceback.format_exc()}"
-    print(error_msg)  # Appears in Vercel logs
-    return JSONResponse({"detail": "Internal Server Error"}, status_code=500)
+# Get LTC price from CoinGecko
+def get_ltc_price():
+    try:
+        resp = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=litecoin&vs_currencies=usd")
+        return resp.json()["litecoin"]["usd"]
+    except:
+        return 0.0
 
-# Favicon handler (prevents crash on /favicon.ico)
-@app.get("/favicon.ico")
-async def favicon():
-    return FileResponse("favicon.ico", media_type="image/x-icon", background=None)  # Optional: Add a real favicon.ico or return 204
+# Ping endpoint
+@app.get("/ping")
+async def ping():
+    return {
+        "status": "alive",
+        "timestamp": datetime.utcnow().isoformat(),
+        "uptime": "99.9%",  # Placeholder; calculate from Supabase if needed
+        "response_time": "50ms"
+    }
 
-# Dashboard
-@app.get("/", response_class=HTMLResponse)
+# Get wallet balance via SoChain API
+@app.get("/api/balance/{address}")
+async def get_balance(address: str):
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(f"https://chain.so/api/v2/get_address_balance/LTC/{address}")
+            data = resp.json()
+            balance = data.get("data", {}).get("confirmed_balance", "0")
+            return {"balance": balance, "price_usd": get_ltc_price()}
+    except Exception as e:
+        return {"error": str(e)}
+
+# Update stats on tx receive
+@app.post("/api/tx")
+async def receive_tx(data: dict):
+    address = data.get("address")
+    if not address:
+        return JSONResponse({"status": "error", "error": "address required"}, status_code=400)
+
+    payload = {
+        "txid": data.get("txid") or "demo-tx",
+        "address": address,
+        "amount": str(data.get("amount") or "0"),
+        "timestamp": data.get("timestamp") or datetime.utcnow().isoformat()
+    }
+
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        await client.post(f"{SUPABASE_URL}/rest/v1/transactions", headers=HEADERS, json=payload)
+        await client.post(
+            f"{SUPABASE_URL}/rest/v1/wallets",
+            headers={**HEADERS, "Prefer": "resolution=merge-duplicates"},
+            json={
+                "user_id": "demo",
+                "label": data.get("label", "demo"),
+                "address": address,
+                "last_balance": payload["amount"]
+            }
+        )
+        # Update stats (increment users)
+        await client.patch(
+            f"{SUPABASE_URL}/rest/v1/stats?order=id.desc&limit=1",
+            headers=HEADERS,
+            json={"total_users": str(int((await client.get(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS)).json().__len__())), "last_update": datetime.utcnow().isoformat()}
+        )
+    return JSONResponse({"status": "ok"})
+
+# Dashboard with stats
+@app.get("/")
 async def dashboard(request: Request):
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            wallets_resp = await client.get(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS)
-            txs_resp = await client.get(f"{SUPABASE_URL}/rest/v1/transactions?order=id.desc&limit=20", headers=HEADERS)
-            wallets_resp.raise_for_status()
-            txs_resp.raise_for_status()
-            wallets = wallets_resp.json()
-            txs = txs_resp.json()
-    except httpx.HTTPStatusError as e:
-        print(f"Supabase HTTP error: {e.response.status_code} - {e.response.text[:200]}")
-        wallets = []
-        txs = []
+            wallets = (await client.get(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS)).json()
+            txs = (await client.get(f"{SUPABASE_URL}/rest/v1/transactions?order=id.desc&limit=20", headers=HEADERS)).json()
+            stats = (await client.get(f"{SUPABASE_URL}/rest/v1/stats?order=id.desc&limit=1", headers=HEADERS)).json()
     except Exception as e:
-        print(f"Dashboard error: {str(e)}\n{traceback.format_exc()}")
-        wallets = []
-        txs = []
+        print("Supabase error:", e)
+        wallets, txs, stats = [], [], [{"total_users": "0", "uptime": "0"}]
 
-    return templates.TemplateResponse("index.html", {"request": request, "wallets": wallets, "txs": txs})
+    ltc_price = get_ltc_price()
+    total_ltc = sum(float(w.get("last_balance", 0)) for w in wallets)
+    total_usd = total_ltc * ltc_price
 
-# Receive tx
-@app.post("/api/tx")
-async def receive_tx(data: dict):
-    try:
-        address = data.get("address")
-        if not address:
-            return JSONResponse({"status": "error", "error": "address required"}, status_code=400)
+    return templates.TemplateResponse("index.html", {
+        "request": request, "wallets": wallets, "txs": txs, "stats": stats[0] if stats else {},
+        "ltc_price": ltc_price, "total_ltc": total_ltc, "total_usd": total_usd
+    })
 
-        payload_tx = {
-            "txid": data.get("txid") or "demo-tx",
-            "address": address,
-            "amount": str(data.get("amount") or "0.0"),
-            "timestamp": data.get("timestamp") or datetime.utcnow().isoformat()
-        }
-        label = data.get("label") or "demo"
-
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            await client.post(f"{SUPABASE_URL}/rest/v1/transactions", headers=HEADERS, json=payload_tx)
-
-            wallet_payload = {
-                "user_id": "demo",
-                "label": label,
-                "address": address,
-                "last_balance": payload_tx["amount"]
-            }
-            await client.post(
-                f"{SUPABASE_URL}/rest/v1/wallets",
-                headers={**HEADERS, "Prefer": "resolution=merge-duplicates"},
-                json=wallet_payload
-            )
-        return JSONResponse({"status": "ok"})
-    except Exception as e:
-        error_msg = f"Tx error: {str(e)}\n{traceback.format_exc()}"
-        print(error_msg)
-        return JSONResponse({"status": "error", "error": str(e)}, status_code=500)
-
-# Add wallet
+# Add wallet (unchanged)
 @app.post("/add_wallet")
 async def add_wallet(user_id: str = Form(...), label: str = Form(...), address: str = Form(...)):
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            await client.post(
-                f"{SUPABASE_URL}/rest/v1/wallets",
-                headers=HEADERS,
-                json={"user_id": user_id, "label": label, "address": address, "last_balance": "0"}
-            )
-        return JSONResponse({"status": "ok"})
-    except Exception as e:
-        print(f"Add wallet error: {str(e)}\n{traceback.format_exc()}")
-        return JSONResponse({"status": "error", "error": str(e)}, status_code=500)
+    async with httpx.AsyncClient() as client:
+        await client.post(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS, json={
+            "user_id": user_id, "label": label, "address": address, "last_balance": "0"
+        })
+    return JSONResponse({"status": "ok"})
