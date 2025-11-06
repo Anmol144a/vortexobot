@@ -1,4 +1,4 @@
-# Vortex Dashboard backend - single folder setup
+# Vortex Dashboard - Serverless Vercel version
 # FastAPI + Jinja2 Templates
 # Made by Anmol
 
@@ -11,12 +11,11 @@ from datetime import datetime
 
 app = FastAPI()
 
-# SQLite DB in root
-DB_PATH = "vortex.db"
-conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+# In-memory SQLite for serverless (resets on each run)
+conn = sqlite3.connect(":memory:", check_same_thread=False)
 c = conn.cursor()
 
-# Create tables if not exist
+# Create tables
 c.execute("""CREATE TABLE IF NOT EXISTS wallets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT,
@@ -66,7 +65,7 @@ async def dashboard(request: Request):
     txs = c.fetchall()
     return templates.TemplateResponse("index.html", {"request": request, "wallets": wallets, "txs": txs})
 
-# Add wallet (optional)
+# Add wallet endpoint (optional)
 @app.post("/add_wallet")
 async def add_wallet(user_id: str = Form(...), label: str = Form(...), address: str = Form(...)):
     try:
@@ -77,5 +76,6 @@ async def add_wallet(user_id: str = Form(...), label: str = Form(...), address: 
     except Exception as e:
         return JSONResponse({"status": "error", "error": str(e)})
 
+# Local run (optional)
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
