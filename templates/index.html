@@ -3,70 +3,166 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Vortex Dashboard</title>
+  <title>Vortex Dashboard Pro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/static/style.css" />
-  <style>
-    body { background: #0f0f1a; color: #fff; font-family: 'Inter', sans-serif; }
-  </style>
 </head>
-<body class="p-6">
-  <div class="max-w-6xl mx-auto">
-    <h1 class="text-4xl font-bold mb-6">Vortex Dashboard • Made by Anmol</h1>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<body>
+  <div class="max-w-6xl">
+    <h1>Vortex Dashboard Pro</h1>
 
+    <!-- Stats -->
+    <div class="grid stats-grid">
+      <div class="stat-card">
+        <h3>Active Users</h3>
+        <p>{{ stats.total_users or 0 }}</p>
+      </div>
+      <div class="stat-card">
+        <h3>Total Balance</h3>
+        <p>{{ "%.4f"|format(total_ltc) }}</p>
+        <small>${{ "%.2f"|format(total_usd) }} USD</small>
+      </div>
+      <div class="stat-card">
+        <h3>Bot Uptime</h3>
+        <p>{{ stats.uptime or "99.9" }}%</p>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex gap-3 mb-6 flex-wrap">
+      <button onclick="refreshData()" class="btn btn-primary">Refresh Data</button>
+      <a href="/ping" class="btn btn-secondary">Ping Bot</a>
+    </div>
+
+    <!-- Demo Form -->
+    <div class="card mb-6">
+      <h2>Send Test Transaction</h2>
+      <form id="demoForm" class="form-group mt-4">
+        <input type="text" placeholder="LTC Address" id="addr" class="input" required />
+        <input type="text" placeholder="Amount (LTC)" id="amt" class="input" />
+        <input type="text" placeholder="Label" id="lbl" class="input" />
+        <button type="submit" class="btn btn-primary">Send</button>
+      </form>
+      <p id="result" class="mt-3 text-sm"></p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
       <!-- Wallets -->
       <div class="card">
-        <h2 class="text-xl font-semibold mb-4">Wallets Tracked</h2>
+        <h2>Monitored Wallets <span id="monitor-alert" class="pulse"></span></h2>
         {% if wallets %}
-        <table>
-          <thead>
-            <tr><th>User</th><th>Label</th><th>Address</th><th>Last Balance</th></tr>
-          </thead>
-          <tbody>
+        <table class="table mt-4">
+          <thead><tr><th>User</th><th>Label</th><th>Address</th><th>Balance</th></tr></thead>
+          <tbody id="wallets-body">
             {% for w in wallets %}
-            <tr>
+            <tr data-address="{{ w.address }}">
               <td>{{ w.user_id }}</td>
               <td>{{ w.label }}</td>
               <td><code>{{ w.address[:10] }}...{{ w.address[-6:] }}</code></td>
-              <td>{{ w.last_balance or "0" }}</td>
+              <td id="bal-{{ w.address }}" class="font-mono">{{ w.last_balance }}</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
         {% else %}
-        <p>No wallets tracked yet.</p>
+        <p class="text-muted mt-4">No wallets tracked yet.</p>
         {% endif %}
       </div>
 
       <!-- Transactions -->
       <div class="card">
-        <h2 class="text-xl font-semibold mb-4">Recent Transactions</h2>
+        <h2>Recent Transactions</h2>
         {% if txs %}
-        <table>
-          <thead>
-            <tr><th>TxID</th><th>Address</th><th>Amount</th><th>Time</th></tr>
-          </thead>
+        <table class="table mt-4">
+          <thead><tr><th>TxID</th><th>Address</th><th>Amount</th><th>Time</th></tr></thead>
           <tbody>
             {% for tx in txs %}
             <tr>
-              <td>
-                <a href="https://blockchair.com/litecoin/transaction/{{ tx.txid }}" target="_blank">
-                  {{ tx.txid[:10] }}...
-                </a>
-              </td>
-              <td>{{ tx.address[:10] }}...</td>
-              <td>{{ tx.amount }}</td>
-              <td>{{ tx.timestamp[:19] | replace("T", " ") }}</td>
+              <td><a href="https://chain.so/tx/LTC/{{ tx.txid }}" target="_blank">{{ tx.txid[:10] }}...</a></td>
+              <td><code>{{ tx.address[:8] }}...</code></td>
+              <td><span class="ltc-badge">{{ tx.amount }} LTC</span></td>
+              <td class="text-muted">{{ tx.timestamp[:19] | replace("T", " ") }}</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
         {% else %}
-        <p>No recent transactions yet.</p>
+        <p class="text-muted mt-4">No transactions yet.</p>
         {% endif %}
       </div>
     </div>
   </div>
+
+  <div id="toast-container"></div>
+
+  <script>
+    // Toast
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<span>${message}</span><span style="margin-left:auto;font-weight:bold;">×</span>`;
+      document.getElementById('toast-container').appendChild(toast);
+      toast.querySelector('span:last-child').onclick = () => toast.remove();
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // Demo Form
+    document.getElementById('demoForm').onsubmit = async e => {
+      e.preventDefault();
+      const payload = {
+        address: document.getElementById('addr').value,
+        amount: document.getElementById('amt').value || "0",
+        label: document.getElementById('lbl').value || "test"
+      };
+      const res = document.getElementById('result');
+      try {
+        const r = await fetch('/api/tx', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const data = await r.json();
+        if (data.status === 'ok') {
+          showToast('Transaction recorded!', 'success');
+          setTimeout(refreshData, 1200);
+        } else {
+          showToast(data.error || 'Failed', 'danger');
+        }
+      } catch (e) {
+        showToast('Network error', 'danger');
+      }
+    };
+
+    // Refresh
+    async function refreshData() {
+      location.reload();
+    }
+
+    // Monitoring
+    let oldBalances = {};
+    async function monitorBalances() {
+      const rows = document.querySelectorAll('#wallets-body tr[data-address]');
+      for (let row of rows) {
+        const addr = row.dataset.address;
+        try {
+          const resp = await fetch(`/api/balance/${addr}`);
+          const data = await resp.json();
+          if (data.balance) {
+            const balCell = document.getElementById(`bal-${addr}`);
+            const oldBal = oldBalances[addr] || balCell.textContent;
+            balCell.textContent = data.balance;
+            const diff = parseFloat(data.balance) - parseFloat(oldBal);
+            if (diff > 0.01) {
+              document.getElementById('monitor-alert').innerHTML = 'New transaction!';
+              showToast(`+${diff.toFixed(4)} LTC received!`, 'success');
+              setTimeout(() => document.getElementById('monitor-alert').innerHTML = '', 5000);
+            }
+            oldBalances[addr] = data.balance;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    setInterval(monitorBalances, 30000);
+    monitorBalances();
+  </script>
 </body>
 </html>
