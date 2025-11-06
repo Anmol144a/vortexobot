@@ -1,31 +1,19 @@
 {
+  "version": 2,
   "builds": [
     {
       "src": "app.py",
       "use": "@vercel/python"
-    },
-    {
-      "src": "templates/*.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "style.css",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/static/(.*)",
-      "dest": "/static/$1"
+      "dest": "/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "app.py"
+      "dest": "/app.py"
     }
-  ],
-  "functions": {
-    "app.py": {
-      "runtime": "python3.12"
-    }
-  }
+  ]
 }
