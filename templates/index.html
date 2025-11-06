@@ -1,358 +1,209 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bg-gray-900 text-white">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vortex LTC Tracker</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    /* style.css - Vortex Pro: Real-Time LTC Tracker UI */
-    :root {
-      --bg: #0a0a1a;
-      --card: #12122e;
-      --card-hover: #1a1a3e;
-      --accent: #7c3aed;
-      --glow: #9f7aea;
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --border: #2d3748;
-      --success: #10b981;
-      --ltc: #f7931a;
-      --shadow: 0 10px 30px rgba(124, 58, 237, 0.3);
-      --gradient: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      min-height: 100vh;
-      background-image: radial-gradient(circle at 20% 80%, rgba(124, 58, 237, 0.15), transparent 50%);
-      line-height: 1.6;
-    }
-
-    h1 {
-      font-size: 2.5rem;
-      text-align: center;
-      margin: 2rem 0 1.5rem;
-      background: linear-gradient(90deg, #e2e8f0, #a78bfa);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      position: relative;
-    }
-
-    h1::after {
-      content: '';
-      position: absolute;
-      bottom: -10px; left: 50%; transform: translateX(-50%);
-      width: 140px; height: 4px;
-      background: var(--gradient);
-      border-radius: 2px;
-      box-shadow: 0 0 15px rgba(124, 58, 237, 0.6);
-    }
-
-    h2 {
-      font-size: 1.4rem;
-      margin-bottom: 1rem;
-      color: var(--accent);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .max-w-6xl { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
-
-    .grid { display: grid; gap: 1.5rem; }
-
-    .card {
-      background: var(--card);
-      border-radius: 1rem;
-      padding: 1.5rem;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 20px 40px rgba(124, 58, 237, 0.4);
-      border-color: var(--accent);
-    }
-
-    .card::before {
-      content: ''; position: absolute; inset: 0;
-      background: var(--gradient); opacity: 0;
-      transition: opacity 0.3s; pointer-events: none;
-    }
-
-    .card:hover::before { opacity: 0.05; }
-
-    .card > * { position: relative; z-index: 1; }
-
-    .table {
-      width: 100%; border-collapse: collapse; font-size: 0.9rem;
-    }
-
-    .table th {
-      text-align: left; padding: 0.75rem 0.5rem;
-      color: var(--accent); font-weight: 600;
-      text-transform: uppercase; font-size: 0.75rem;
-      letter-spacing: 1px; border-bottom: 1px solid var(--border);
-    }
-
-    .table td {
-      padding: 0.75rem 0.5rem;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-    }
-
-    .table tr:hover { background: rgba(124, 58, 237, 0.08); }
-
-    .table code {
-      background: rgba(124, 58, 237, 0.2);
-      padding: 0.2rem 0.4rem; border-radius: 0.375rem;
-      font-size: 0.8rem; color: #ddd6fe;
-    }
-
-    .btn {
-      padding: 0.75rem 1.5rem; border-radius: 0.75rem;
-      font-weight: 600; cursor: pointer;
-      transition: all 0.3s; border: none; font-size: 0.95rem;
-      display: inline-flex; align-items: center; gap: 0.5rem;
-    }
-
-    .btn-primary {
-      background: var(--gradient); color: white;
-      box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(124, 58, 237, 0.6);
-    }
-
-    .input {
-      padding: 0.75rem 1rem; background: rgba(30, 41, 59, 0.6);
-      border: 1px solid var(--border); border-radius: 0.75rem;
-      color: var(--text); font-size: 0.95rem;
-      transition: all 0.3s; backdrop-filter: blur(10px);
-      width: 100%;
-    }
-
-    .input:focus {
-      outline: none; border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
-    }
-
-    .form-group {
-      display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.75rem;
-      margin-bottom: 1rem;
-    }
-
-    .ltc-badge {
-      background: linear-gradient(135deg, #f7931a 0%, #f59e0b 100%);
-      color: white; padding: 0.25rem 0.75rem;
-      border-radius: 999px; font-size: 0.75rem; font-weight: 600;
-      display: inline-flex; align-items: center; gap: 0.25rem;
-    }
-
-    .toast {
-      position: fixed; bottom: 1rem; right: 1rem;
-      background: var(--card); color: var(--text);
-      padding: 1rem 1.5rem; border-radius: 0.75rem;
-      border-left: 4px solid var(--success);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-      display: flex; align-items: center; gap: 0.75rem;
-      font-weight: 500; z-index: 1000;
-      animation: slideIn 0.4s ease, fadeOut 0.4s ease 2.6s forwards;
-      opacity: 0;
-    }
-
-    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    @keyframes fadeOut { to { opacity: 0; transform: translateY(20px); } }
-
-    @media (max-width: 768px) {
-      .form-group { grid-template-columns: 1fr; }
-      h1 { font-size: 2rem; }
-    }
+    body { font-family: 'Inter', sans-serif; }
+    .input { @apply bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-orange-500; }
+    .btn { @apply px-4 py-2 rounded-lg font-medium transition; }
+    .btn-primary { @apply bg-orange-500 hover:bg-orange-600 text-white; }
+    .card { @apply bg-gray-800 p-6 rounded-xl shadow-lg; }
+    .table { @apply w-full text-left text-sm; }
+    .table th { @apply pb-3 font-semibold text-gray-400; }
+    .table td { @apply py-2; }
+    code { @apply bg-gray-700 px-2 py-1 rounded text-xs; }
   </style>
 </head>
-<body>
-  <div class="max-w-6xl">
-    <h1>Vortex LTC Tracker</h1>
+<body class="min-h-screen">
+
+  <div class="container mx-auto p-6 max-w-5xl">
+
+    <!-- Header -->
+    <header class="text-center mb-8">
+      <h1 class="text-4xl font-bold text-orange-500 mb-2">Vortex LTC Tracker</h1>
+      <p class="text-gray-400">Real-time Litecoin address monitoring • Legacy & Bech32 supported</p>
+    </header>
+
+    <!-- Bot Status & Stats -->
+    <div class="card mb-6">
+      <h2 class="text-xl font-bold mb-4 text-cyan-400">Bot Status & Stats</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+        <div class="bg-gray-700 p-4 rounded-lg">
+          <p class="text-2xl font-bold" id="botOnline">Loading...</p>
+          <p class="text-sm text-gray-400">Bot Status</p>
+        </div>
+        <div class="bg-gray-700 p-4 rounded-lg">
+          <p class="text-2xl font-bold text-orange-400" id="botUptime">0h 0m</p>
+          <p class="text-sm text-gray-400">Uptime</p>
+        </div>
+        <div class="bg-gray-700 p-4 rounded-lg">
+          <p class="text-2xl font-bold text-purple-400" id="totalWallets">0</p>
+          <p class="text-sm text-gray-400">Tracked Wallets</p>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 mt-3" id="lastPing">Last ping: never</p>
+    </div>
 
     <!-- Add Address Form -->
     <div class="card mb-6">
-      <h2>Track New Address</h2>
-      <form id="trackForm" class="form-group mt-4">
-        <input type="text" placeholder="LTC Address (e.g. LTest...)" id="addr" class="input" required />
-        <input type="text" placeholder="Label (optional)" id="lbl" class="input" />
-        <input type="number" placeholder="Alert Min (LTC)" id="min" class="input" step="0.001" value="0.01" />
-        <button type="submit" class="btn btn-primary">Track</button>
+      <h2 class="text-xl font-bold mb-4 text-green-400">Track New Address</h2>
+      <form id="addForm" class="flex flex-col md:flex-row gap-3">
+        <input type="text" id="address" placeholder="L... or ltc1..." class="flex-1 input" required />
+        <input type="text" id="label" placeholder="Label (optional)" class="input w-40" />
+        <input type="number" step="0.001" id="min" placeholder="Min Alert (LTC)" class="input w-32" value="0.01" />
+        <button type="submit" class="btn btn-primary">Add</button>
       </form>
-      <p id="result" class="mt-3 text-sm"></p>
+      <p id="addStatus" class="mt-2 text-sm"></p>
     </div>
 
-    <div class="grid md:grid-cols-2 gap-6">
-      <!-- Wallets -->
-      <div class="card">
-        <h2>Monitored Addresses <span id="alert-bell" class="text-2xl"></span></h2>
-        <div id="wallets-body">
-          <!-- Wallets loaded via JS -->
-        </div>
-        <p class="text-muted mt-4" id="no-wallets">No addresses tracked. Add one above.</p>
-      </div>
-
-      <!-- Recent Tx -->
-      <div class="card">
-        <h2>Latest Transactions</h2>
-        <div id="txs-body">
-          <!-- Transactions loaded via JS -->
-        </div>
-        <p class="text-muted mt-4" id="no-txs">No transactions yet.</p>
+    <!-- Monitored Addresses -->
+    <div class="card mb-6">
+      <h2 class="text-xl font-bold mb-4 text-orange-500">Monitored Addresses</h2>
+      <div id="addressesList" class="space-y-3">
+        <p class="text-center text-gray-500">Loading addresses...</p>
       </div>
     </div>
+
+    <!-- Latest Transactions -->
+    <div class="card">
+      <h2 class="text-xl font-bold mb-4 text-yellow-400">Latest Transactions</h2>
+      <div id="txList" class="space-y-3">
+        <p class="text-center text-gray-500">No transactions yet.</p>
+      </div>
+    </div>
+
   </div>
 
-  <div id="toast-container"></div>
-
   <script>
-    const SUPABASE_URL = "https://enciwuvvqhnkkfourhkm.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_6cA5-fNu24sHcHxENX474Q__oCrovZR";
-    const HEADERS = { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` };
-    const tracked = new Map();
+    // Elements
+    const addForm = document.getElementById('addForm');
+    const addStatus = document.getElementById('addStatus');
+    const addressesList = document.getElementById('addressesList');
+    const txList = document.getElementById('txList');
 
-    // Toast
-    function toast(msg, type = 'success') {
-      const t = document.createElement('div');
-      t.className = `toast ${type}`;
-      t.innerHTML = `<span>${msg}</span><span style="margin-left:auto;cursor:pointer;">×</span>`;
-      document.getElementById('toast-container').appendChild(t);
-      t.querySelector('span:last-child').onclick = () => t.remove();
-      setTimeout(() => t.remove(), 3000);
+    // Load Bot Status
+    async function loadBotStatus() {
+      try {
+        const res = await fetch('/api/bot_status');
+        const data = await res.json();
+        if (data.length > 0) {
+          const s = data[0];
+          document.getElementById('botOnline').textContent = s.is_running ? 'ONLINE' : 'OFFLINE';
+          document.getElementById('botOnline').className = s.is_running 
+            ? 'text-2xl font-bold text-green-400' 
+            : 'text-2xl font-bold text-red-400';
+          document.getElementById('botUptime').textContent = s.uptime || '0h 0m';
+          document.getElementById('totalWallets').textContent = s.wallet_count || 0;
+          document.getElementById('lastPing').textContent = `Last ping: ${formatTime(s.last_ping)}`;
+        }
+      } catch (e) { console.error(e); }
     }
 
-    // Load Data
-    async function loadData() {
+    // Load Addresses (with balance + user)
+    async function loadAddresses() {
       try {
-        const [walletsRes, txsRes] = await Promise.all([
-          fetch(`${SUPABASE_URL}/rest/v1/wallets`, { headers: HEADERS }),
-          fetch(`${SUPABASE_URL}/rest/v1/transactions?order=id.desc&limit=20`, { headers: HEADERS })
-        ]);
-        const wallets = await walletsRes.json();
-        const txs = await txsRes.json();
-
-        // Wallets
-        const wb = document.getElementById('wallets-body');
-        const nw = document.getElementById('no-wallets');
-        if (wallets.length) {
-          nw.style.display = 'none';
-          wb.innerHTML = wallets.map(w => `
-            <div class="table-row" data-address="${w.address}" data-min="${w.alert_min || 0.01}">
-              <div class="table-cell">${w.label || "—"}</div>
-              <div class="table-cell"><code>${w.address.slice(0,10)}...${w.address.slice(-6)}</code></div>
-              <div class="table-cell font-mono" id="bal-${w.address}">0.0000</div>
-              <div class="table-cell text-muted" id="last-${w.address}">—</div>
+        const res = await fetch('/api/wallets');
+        const wallets = await res.json();
+        addressesList.innerHTML = wallets.length === 0 
+          ? '<p class="text-center text-gray-500">No addresses tracked. Add one above.</p>'
+          : wallets.map(w => `
+            <div class="bg-gray-700 p-4 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+              <div>
+                <p class="font-semibold text-orange-400">${escape(w.label)}</p>
+                <code class="text-xs text-gray-300 break-all">${w.address}</code>
+                <span class="text-xs text-cyan-400 ml-2">(Alert ≥ ${w.alert_min} LTC)</span>
+              </div>
+              <div class="text-right">
+                <p class="text-lg font-bold text-green-400">${w.balance?.toFixed(4) || '0.0000'} LTC</p>
+                <p class="text-xs text-gray-500">by @${escape(w.username || 'Anon')}</p>
+              </div>
             </div>
           `).join('');
-        } else {
-          nw.style.display = 'block';
-          wb.innerHTML = '';
-        }
-
-        // Transactions
-        const tb = document.getElementById('txs-body');
-        const nt = document.getElementById('no-txs');
-        if (txs.length) {
-          nt.style.display = 'none';
-          tb.innerHTML = txs.map(tx => `
-            <div class="table-row">
-              <div class="table-cell"><a href="https://chain.so/tx/LTC/${tx.txid}" target="_blank" class="text-blue-400">${tx.txid.slice(0,10)}...</a></div>
-              <div class="table-cell"><code>${tx.from_addr?.slice(0,8) || "—"}...</code></div>
-              <div class="table-cell"><span class="ltc-badge">${tx.amount} LTC</span></div>
-              <div class="table-cell text-muted">${tx.timestamp.slice(0,19).replace("T", " ")}</div>
-            </div>
-          `).join('');
-        } else {
-          nt.style.display = 'block';
-          tb.innerHTML = '';
-        }
       } catch (e) {
-        toast('Failed to load data', 'danger');
+        addressesList.innerHTML = '<p class="text-red-400">Failed to load addresses.</p>';
+      }
+    }
+
+    // Load Transactions
+    async function loadTransactions() {
+      try {
+        const res = await fetch('/api/transactions');
+        const txs = await res.json();
+        txList.innerHTML = txs.length === 0 
+          ? '<p class="text-center text-gray-500">No transactions yet.</p>'
+          : txs.map(t => `
+            <div class="bg-gray-700 p-4 rounded-lg">
+              <div class="flex justify-between items-center mb-2">
+                <p class="font-semibold text-yellow-400">+${t.amount} LTC</p>
+                <p class="text-xs text-gray-400">${formatTime(t.timestamp)}</p>
+              </div>
+              <p class="text-sm"><strong>From:</strong> <code>${t.from_addr.slice(0,12)}...</code></p>
+              <p class="text-sm"><strong>To:</strong> <code>${t.address.slice(0,12)}...</code></p>
+              <p class="text-sm"><strong>TxID:</strong> <a href="https://chain.so/tx/LTC/${t.txid}" target="_blank" class="text-orange-400 hover:underline">View →</a></p>
+            </div>
+          `).join('');
+      } catch (e) {
+        txList.innerHTML = '<p class="text-red-400">Failed to load transactions.</p>';
       }
     }
 
     // Add Address
-    document.getElementById('trackForm').onsubmit = async e => {
+    addForm.onsubmit = async (e) => {
       e.preventDefault();
-      const addr = document.getElementById('addr').value.trim();
-      const label = document.getElementById('lbl').value.trim() || "—";
-      const min = parseFloat(document.getElementById('min').value) || 0.01;
-
-      if (!addr.startsWith('L')) return toast('Invalid LTC address', 'danger');
-
+      addStatus.textContent = "Adding...";
+      const payload = {
+        address: document.getElementById('address').value.trim(),
+        label: document.getElementById('label').value || "Unnamed",
+        min: parseFloat(document.getElementById('min').value)
+      };
       try {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/wallets`, {
+        const res = await fetch('/api/add_wallet', {
           method: 'POST',
-          headers: { ...HEADERS, "Content-Type": "application/json", "Prefer": "return=minimal" },
-          body: JSON.stringify({ address: addr, label, alert_min: min })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
-        if (r.ok) {
-          toast('Address added! Monitoring started.', 'success');
-          setTimeout(loadData, 1200);
-        } else {
-          toast('Failed to add', 'danger');
+        const data = await res.json();
+        addStatus.textContent = data.status === "ok" ? "Added successfully!" : "Failed. Check address.";
+        addStatus.className = data.status === "ok" ? "text-green-400" : "text-red-400";
+        if (data.status === "ok") {
+          addForm.reset();
+          setTimeout(() => { loadAddresses(); loadBotStatus(); }, 1000);
         }
-      } catch {
-        toast('Network error', 'danger');
+      } catch (e) {
+        addStatus.textContent = "Error. Try again.";
+        addStatus.className = "text-red-400";
       }
     };
 
-    // Poll & Notify
-    async function monitor() {
-      const rows = document.querySelectorAll('[data-address]');
-      for (let row of rows) {
-        const addr = row.dataset.address;
-        const min = parseFloat(row.dataset.min);
-        try {
-          const resp = await fetch(`https://chain.so/api/v3/address/LTC/${addr}`);
-          const data = await resp.json();
-          const bal = parseFloat(data.data?.balance || 0).toFixed(4);
-
-          const balCell = document.getElementById(`bal-${addr}`);
-          const oldBal = tracked.get(addr) || 0;
-          balCell.textContent = bal;
-
-          if (bal > oldBal + min) {
-            const diff = (bal - oldBal).toFixed(4);
-            document.getElementById('alert-bell').textContent = 'New Tx!';
-            toast(`+${diff} LTC received on ${addr.slice(0,10)}...`, 'success');
-            setTimeout(() => document.getElementById('alert-bell').textContent = '', 5000);
-          }
-          tracked.set(addr, parseFloat(bal));
-
-          // Latest tx
-          const txResp = await fetch(`https://chain.so/api/v3/address_txs/LTC/${addr}`);
-          const txData = await txResp.json();
-          const tx = txData.data?.txs?.[0];
-          if (tx) {
-            document.getElementById(`last-${addr}`).innerHTML = `<a href="https://chain.so/tx/LTC/${tx.txid}" target="_blank" class="text-blue-400">${tx.time.slice(11,19)}</a>`;
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }
+    // Helpers
+    function escape(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
-    // Init
-    loadData();
-    setInterval(monitor, 30000);
-    monitor();
+    function formatTime(iso) {
+      if (!iso) return 'never';
+      return new Date(iso).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    // Auto Refresh Every 15s
+    setInterval(() => {
+      loadBotStatus();
+      loadAddresses();
+      loadTransactions();
+    }, 15000);
+
+    // Initial Load
+    loadBotStatus();
+    loadAddresses();
+    loadTransactions();
   </script>
 </body>
 </html>
