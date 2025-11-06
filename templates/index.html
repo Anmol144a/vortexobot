@@ -1,101 +1,122 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-gray-900 text-white">
+<html lang="en" class="bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 text-white min-h-screen">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vortex LTC Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <style>
     body { font-family: 'Inter', sans-serif; }
-    .input { @apply bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-orange-500; }
-    .btn { @apply px-4 py-2 rounded-lg font-medium transition; }
-    .btn-primary { @apply bg-orange-500 hover:bg-orange-600 text-white; }
-    .card { @apply bg-gray-800 p-6 rounded-xl shadow-lg; }
-    .table { @apply w-full text-left text-sm; }
-    .table th { @apply pb-3 font-semibold text-gray-400; }
-    .table td { @apply py-2; }
-    code { @apply bg-gray-700 px-2 py-1 rounded text-xs; }
+    .glass { @apply bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl; }
+    .input { @apply bg-blue-900/50 border border-blue-700 rounded-xl px-5 py-3 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition; }
+    .btn { @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg; }
+    .btn-primary { @apply bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white; }
+    .card { @apply glass p-6 md:p-8 rounded-2xl; }
+    .stat-card { @apply glass p-5 rounded-xl text-center transform transition-all duration-500 hover:scale-105; }
+    .address-card { @apply glass p-5 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-cyan-500/20; }
+    .tx-card { @apply glass p-5 rounded-xl space-y-3 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-blue-500/20; }
+    .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .float { animation: float 6s ease-in-out infinite; }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .gradient-text { @apply bg-gradient-to-r from-cyan-400 to-blue-300 bg-clip-text text-transparent; }
+    code { @apply bg-blue-900/70 px-3 py-1 rounded-lg text-xs font-mono; }
   </style>
 </head>
 <body class="min-h-screen">
 
-  <div class="container mx-auto p-6 max-w-5xl">
+  <div class="container mx-auto p-6 max-w-6xl">
+
+    <!-- Floating Particles Background -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute top-20 left-20 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl float"></div>
+      <div class="absolute bottom-32 right-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl float" style="animation-delay: -3s;"></div>
+      <div class="absolute top-1/2 left-1/2 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl float" style="animation-delay: -1.5s;"></div>
+    </div>
 
     <!-- Header -->
-    <header class="text-center mb-8">
-      <h1 class="text-4xl font-bold text-orange-500 mb-2">Vortex LTC Tracker</h1>
-      <p class="text-gray-400">Real-time Litecoin address monitoring • Legacy & Bech32 supported</p>
+    <header class="text-center mb-10 relative z-10">
+      <h1 class="text-5xl md:text-6xl font-bold gradient-text mb-3">Vortex LTC Tracker</h1>
+      <p class="text-blue-200 text-lg">Real-time Litecoin monitoring • Legacy & Bech32 supported</p>
     </header>
 
     <!-- Bot Status & Stats -->
-    <div class="card mb-6">
-      <h2 class="text-xl font-bold mb-4 text-cyan-400">Bot Status & Stats</h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-        <div class="bg-gray-700 p-4 rounded-lg">
-          <p class="text-2xl font-bold" id="botOnline">Loading...</p>
-          <p class="text-sm text-gray-400">Bot Status</p>
+    <div class="card mb-8">
+      <h2 class="text-2xl font-bold mb-6 text-cyan-300 flex items-center gap-3">
+        <i class="fas fa-robot pulse text-cyan-400"></i> Bot Status & Stats
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="stat-card">
+          <p class="text-3xl font-bold" id="botOnline">Loading...</p>
+          <p class="text-blue-300 text-sm mt-1">Bot Status</p>
         </div>
-        <div class="bg-gray-700 p-4 rounded-lg">
-          <p class="text-2xl font-bold text-orange-400" id="botUptime">0h 0m</p>
-          <p class="text-sm text-gray-400">Uptime</p>
+        <div class="stat-card">
+          <p class="text-3xl font-bold text-cyan-400" id="botUptime">0h 0m</p>
+          <p class="text-blue-300 text-sm mt-1">Uptime</p>
         </div>
-        <div class="bg-gray-700 p-4 rounded-lg">
-          <p class="text-2xl font-bold text-purple-400" id="totalWallets">0</p>
-          <p class="text-sm text-gray-400">Tracked Wallets</p>
+        <div class="stat-card">
+          <p class="text-3xl font-bold text-purple-400" id="totalWallets">0</p>
+          <p class="text-blue-300 text-sm mt-1">Tracked Wallets</p>
         </div>
       </div>
-      <p class="text-xs text-gray-500 mt-3" id="lastPing">Last ping: never</p>
+      <p class="text-xs text-blue-300 mt-4 text-right" id="lastPing">Last ping: never</p>
     </div>
 
     <!-- Add Address Form -->
-    <div class="card mb-6">
-      <h2 class="text-xl font-bold mb-4 text-green-400">Track New Address</h2>
-      <form id="addForm" class="flex flex-col md:flex-row gap-3">
-        <input type="text" id="address" placeholder="L... or ltc1..." class="flex-1 input" required />
-        <input type="text" id="label" placeholder="Label (optional)" class="input w-40" />
-        <input type="number" step="0.001" id="min" placeholder="Min Alert (LTC)" class="input w-32" value="0.01" />
-        <button type="submit" class="btn btn-primary">Add</button>
+    <div class="card mb-8">
+      <h2 class="text-2xl font-bold mb-6 text-green-400 flex items-center gap-3">
+        <i class="fas fa-plus-circle"></i> Track New Address
+      </h2>
+      <form id="addForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <input type="text" id="address" placeholder="L... or ltc1..." class="input md:col-span-2" required />
+        <input type="text" id="label" placeholder="Label (optional)" class="input" />
+        <input type="number" step="0.001" id="min" placeholder="Min Alert (LTC)" class="input" value="0.01" />
+        <button type="submit" class="btn btn-primary md:col-start-4">Add</button>
       </form>
-      <p id="addStatus" class="mt-2 text-sm"></p>
+      <p id="addStatus" class="mt-3 text-sm"></p>
     </div>
 
     <!-- Monitored Addresses -->
-    <div class="card mb-6">
-      <h2 class="text-xl font-bold mb-4 text-orange-500">Monitored Addresses</h2>
-      <div id="addressesList" class="space-y-3">
-        <p class="text-center text-gray-500">Loading addresses...</p>
+    <div class="card mb-8">
+      <h2 class="text-2xl font-bold mb-6 text-orange-400 flex items-center gap-3">
+        <i class="fas fa-wallet"></i> Monitored Addresses
+      </h2>
+      <div id="addressesList" class="space-y-4">
+        <p class="text-center text-blue-300">Loading addresses...</p>
       </div>
     </div>
 
     <!-- Latest Transactions -->
     <div class="card">
-      <h2 class="text-xl font-bold mb-4 text-yellow-400">Latest Transactions</h2>
-      <div id="txList" class="space-y-3">
-        <p class="text-center text-gray-500">No transactions yet.</p>
+      <h2 class="text-2xl font-bold mb-6 text-yellow-400 flex items-center gap-3">
+        <i class="fas fa-exchange-alt"></i> Latest Transactions
+      </h2>
+      <div id="txList" class="space-y-4">
+        <p class="text-center text-blue-300">No transactions yet.</p>
       </div>
     </div>
 
   </div>
 
   <script>
-    // Elements
     const addForm = document.getElementById('addForm');
     const addStatus = document.getElementById('addStatus');
     const addressesList = document.getElementById('addressesList');
     const txList = document.getElementById('txList');
 
-    // Load Bot Status
     async function loadBotStatus() {
       try {
         const res = await fetch('/api/bot_status');
         const data = await res.json();
         if (data.length > 0) {
           const s = data[0];
-          document.getElementById('botOnline').textContent = s.is_running ? 'ONLINE' : 'OFFLINE';
-          document.getElementById('botOnline').className = s.is_running 
-            ? 'text-2xl font-bold text-green-400' 
-            : 'text-2xl font-bold text-red-400';
+          const onlineEl = document.getElementById('botOnline');
+          onlineEl.textContent = s.is_running ? 'ONLINE' : 'OFFLINE';
+          onlineEl.className = s.is_running 
+            ? 'text-3xl font-bold text-green-400' 
+            : 'text-3xl font-bold text-red-400';
           document.getElementById('botUptime').textContent = s.uptime || '0h 0m';
           document.getElementById('totalWallets').textContent = s.wallet_count || 0;
           document.getElementById('lastPing').textContent = `Last ping: ${formatTime(s.last_ping)}`;
@@ -103,58 +124,59 @@
       } catch (e) { console.error(e); }
     }
 
-    // Load Addresses (with balance + user)
     async function loadAddresses() {
       try {
         const res = await fetch('/api/wallets');
         const wallets = await res.json();
         addressesList.innerHTML = wallets.length === 0 
-          ? '<p class="text-center text-gray-500">No addresses tracked. Add one above.</p>'
+          ? '<p class="text-center text-blue-300">No addresses tracked. Add one above.</p>'
           : wallets.map(w => `
-            <div class="bg-gray-700 p-4 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+            <div class="address-card">
               <div>
-                <p class="font-semibold text-orange-400">${escape(w.label)}</p>
-                <code class="text-xs text-gray-300 break-all">${w.address}</code>
-                <span class="text-xs text-cyan-400 ml-2">(Alert ≥ ${w.alert_min} LTC)</span>
+                <p class="font-bold text-cyan-300">${escape(w.label)}</p>
+                <code class="break-all">${w.address}</code>
+                <span class="text-xs text-blue-400 ml-2">(Alert ≥ ${w.alert_min} LTC)</span>
               </div>
               <div class="text-right">
-                <p class="text-lg font-bold text-green-400">${w.balance?.toFixed(4) || '0.0000'} LTC</p>
-                <p class="text-xs text-gray-500">by @${escape(w.username || 'Anon')}</p>
+                <p class="text-2xl font-bold text-green-400">${w.balance?.toFixed(4) || '0.0000'} LTC</p>
+                <p class="text-sm text-blue-300">by @${escape(w.username || 'Anon')}</p>
               </div>
             </div>
           `).join('');
       } catch (e) {
-        addressesList.innerHTML = '<p class="text-red-400">Failed to load addresses.</p>';
+        addressesList.innerHTML = '<p class="text-red-400 text-center">Failed to load addresses.</p>';
       }
     }
 
-    // Load Transactions
     async function loadTransactions() {
       try {
         const res = await fetch('/api/transactions');
         const txs = await res.json();
         txList.innerHTML = txs.length === 0 
-          ? '<p class="text-center text-gray-500">No transactions yet.</p>'
+          ? '<p class="text-center text-blue-300">No transactions yet.</p>'
           : txs.map(t => `
-            <div class="bg-gray-700 p-4 rounded-lg">
-              <div class="flex justify-between items-center mb-2">
-                <p class="font-semibold text-yellow-400">+${t.amount} LTC</p>
-                <p class="text-xs text-gray-400">${formatTime(t.timestamp)}</p>
+            <div class="tx-card">
+              <div class="flex justify-between items-center">
+                <p class="text-xl font-bold text-yellow-400">+${t.amount} LTC</p>
+                <p class="text-sm text-blue-300">${formatTime(t.timestamp)}</p>
               </div>
-              <p class="text-sm"><strong>From:</strong> <code>${t.from_addr.slice(0,12)}...</code></p>
+              <p class="text-sm"><strong>From:</strong> <code>${t.from_addr?.slice(0,12)}...</code></p>
               <p class="text-sm"><strong>To:</strong> <code>${t.address.slice(0,12)}...</code></p>
-              <p class="text-sm"><strong>TxID:</strong> <a href="https://chain.so/tx/LTC/${t.txid}" target="_blank" class="text-orange-400 hover:underline">View →</a></p>
+              <p class="text-sm"><strong>TxID:</strong> 
+                <a href="https://chain.so/tx/LTC/${t.txid}" target="_blank" 
+                   class="text-cyan-400 hover:underline">View →</a>
+              </p>
             </div>
           `).join('');
       } catch (e) {
-        txList.innerHTML = '<p class="text-red-400">Failed to load transactions.</p>';
+        txList.innerHTML = '<p class="text-red-400 text-center">Failed to load transactions.</p>';
       }
     }
 
-    // Add Address
     addForm.onsubmit = async (e) => {
       e.preventDefault();
       addStatus.textContent = "Adding...";
+      addStatus.className = "mt-3 text-sm text-yellow-400";
       const payload = {
         address: document.getElementById('address').value.trim(),
         label: document.getElementById('label').value || "Unnamed",
@@ -167,19 +189,18 @@
           body: JSON.stringify(payload)
         });
         const data = await res.json();
-        addStatus.textContent = data.status === "ok" ? "Added successfully!" : "Failed. Check address.";
-        addStatus.className = data.status === "ok" ? "text-green-400" : "text-red-400";
+        addStatus.textContent = data.status === "ok" ? "Added successfully!" : data.message || "Failed.";
+        addStatus.className = data.status === "ok" ? "mt-3 text-sm text-green-400" : "mt-3 text-sm text-red-400";
         if (data.status === "ok") {
           addForm.reset();
           setTimeout(() => { loadAddresses(); loadBotStatus(); }, 1000);
         }
       } catch (e) {
-        addStatus.textContent = "Error. Try again.";
-        addStatus.className = "text-red-400";
+        addStatus.textContent = "Network error.";
+        addStatus.className = "mt-3 text-sm text-red-400";
       }
     };
 
-    // Helpers
     function escape(text) {
       const div = document.createElement('div');
       div.textContent = text;
@@ -193,7 +214,7 @@
       });
     }
 
-    // Auto Refresh Every 15s
+    // Auto Refresh
     setInterval(() => {
       loadBotStatus();
       loadAddresses();
