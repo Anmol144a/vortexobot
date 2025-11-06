@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 text-white min-h-screen">
+<html lang="en" class="bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 text-white min-h-screen overflow-x-hidden">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -9,102 +9,254 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <style>
     body { font-family: 'Inter', sans-serif; }
-    .glass { @apply bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl; }
-    .input { @apply bg-blue-900/50 border border-blue-700 rounded-xl px-5 py-3 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition; }
-    .btn { @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg; }
-    .btn-primary { @apply bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white; }
-    .card { @apply glass p-6 md:p-8 rounded-2xl; }
-    .stat-card { @apply glass p-5 rounded-xl text-center transform transition-all duration-500 hover:scale-105; }
-    .address-card { @apply glass p-5 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-cyan-500/20; }
-    .tx-card { @apply glass p-5 rounded-xl space-y-3 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-blue-500/20; }
+    .glass { @apply bg-white/5 backdrop-blur-2xl border border-cyan-500/20 shadow-2xl; }
+    .input { 
+      @apply bg-gradient-to-r from-blue-800/50 to-blue-900/50 border-2 border-cyan-500/30 rounded-2xl px-5 py-3 text-white placeholder-cyan-200/70 
+      focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 
+      transition-all duration-300 glow-input;
+    }
+    .btn { 
+      @apply px-6 py-3 rounded-2xl font-bold transition-all duration-300 transform hover:scale-110 
+      shadow-lg hover:shadow-cyan-500/50 glow-btn;
+    }
+    .btn-primary { 
+      @apply bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white;
+    }
+    .card { @apply glass p-6 md:p-8 rounded-3xl animate-fade-in; }
+    .stat-card { 
+      @apply glass p-5 rounded-2xl text-center transform transition-all duration-500 hover:scale-110 
+      hover:shadow-cyan-500/30 glow-stat;
+    }
+    .address-card { 
+      @apply glass p-5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 
+      transform transition-all duration-300 hover:scale-[1.02] hover:shadow-cyan-500/40 glow-address;
+    }
+    .tx-card { 
+      @apply glass p-5 rounded-2xl space-y-3 transform transition-all duration-300 hover:scale-[1.02] 
+      hover:shadow-blue-500/40 glow-tx;
+    }
     .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
     .float { animation: float 6s ease-in-out infinite; }
-    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-    .gradient-text { @apply bg-gradient-to-r from-cyan-400 to-blue-300 bg-clip-text text-transparent; }
-    code { @apply bg-blue-900/70 px-3 py-1 rounded-lg text-xs font-mono; }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+    .gradient-text { @apply bg-gradient-to-r from-cyan-300 via-blue-300 to-cyan-400 bg-clip-text text-transparent; }
+    .glow-input { box-shadow: 0 0 15px rgba(34, 211, 238, 0.2); }
+    .glow-btn { box-shadow: 0 0 25px rgba(34, 211, 238, 0.4); }
+    .glow-stat { box-shadow: 0 0 20px rgba(34, 211, 238, 0.25); }
+    .glow-address { box-shadow: 0 0 18px rgba(34, 211, 238, 0.3); }
+    .glow-tx { box-shadow: 0 0 18px rgba(59, 130, 246, 0.3); }
+    code { @apply bg-blue-900/60 px-3 py-1.5 rounded-xl text-xs font-mono border border-cyan-500/30; }
+    .animate-fade-in { animation: fadeIn 0.8s ease-out forwards; opacity: 0; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .neon-border { 
+      position: relative; 
+      overflow: hidden; 
+      border-radius: 1.5rem;
+    }
+    .neon-border::before {
+      content: ''; 
+      position: absolute; 
+      top: -2px; left: -2px; right: -2px; bottom: -2px; 
+      background: linear-gradient(45deg, #22d3ee, #3b82f6, #22d3ee); 
+      z-index: -1; 
+      border-radius: 1.5rem; 
+      animation: neonPulse 3s linear infinite;
+    }
+    @keyframes neonPulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    .sparkle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: white;
+      border-radius: 50%;
+      animation: sparkle 1.5s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes sparkle {
+      0% { transform: scale(0) rotate(0deg); opacity: 1; }
+      100% { transform: scale(1) rotate(180deg); opacity: 0; }
+    }
+    .price-ticker {
+      @apply bg-gradient-to-r from-cyan-600/20 to-blue-600/20 border border-cyan-500/30 p-3 rounded-2xl text-center;
+      animation: tickerGlow 4s ease-in-out infinite;
+    }
+    @keyframes tickerGlow {
+      0%, 100% { box-shadow: 0 0 10px rgba(34, 211, 238, 0.3); }
+      50% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.6); }
+    }
+    .network-stats {
+      @apply grid grid-cols-2 md:grid-cols-4 gap-4 text-center;
+    }
+    .network-stat {
+      @apply glass p-4 rounded-xl;
+    }
+    .footer {
+      @apply mt-16 text-center text-cyan-300 text-sm;
+    }
   </style>
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen relative">
 
-  <div class="container mx-auto p-6 max-w-6xl">
+  <!-- Floating Particles -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute top-20 left-20 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl float"></div>
+    <div class="absolute bottom-32 right-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl float" style="animation-delay: -3s;"></div>
+    <div class="absolute top-1/2 left-1/2 w-72 h-72 bg-cyan-400/10 rounded-full blur-3xl float" style="animation-delay: -1.5s;"></div>
+  </div>
 
-    <!-- Floating Particles Background -->
-    <div class="fixed inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute top-20 left-20 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl float"></div>
-      <div class="absolute bottom-32 right-32 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl float" style="animation-delay: -3s;"></div>
-      <div class="absolute top-1/2 left-1/2 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl float" style="animation-delay: -1.5s;"></div>
-    </div>
+  <div class="container mx-auto p-6 max-w-7xl relative z-10">
 
     <!-- Header -->
-    <header class="text-center mb-10 relative z-10">
-      <h1 class="text-5xl md:text-6xl font-bold gradient-text mb-3">Vortex LTC Tracker</h1>
-      <p class="text-blue-200 text-lg">Real-time Litecoin monitoring • Legacy & Bech32 supported</p>
+    <header class="text-center mb-10">
+      <h1 class="text-5xl md:text-6xl font-bold gradient-text mb-3 animate-fade-in">Vortex LTC Tracker</h1>
+      <p class="text-cyan-200 text-lg animate-fade-in" style="animation-delay: 0.2s;">Real-time Litecoin monitoring • Legacy & Bech32 supported</p>
     </header>
 
-    <!-- Bot Status & Stats -->
-    <div class="card mb-8">
-      <h2 class="text-2xl font-bold mb-6 text-cyan-300 flex items-center gap-3">
+    <!-- LTC Price Ticker -->
+    <div class="price-ticker mb-8 animate-fade-in" style="animation-delay: 0.3s;">
+      <p class="text-2xl font-bold" id="ltcPrice">Loading LTC Price...</p>
+      <p class="text-sm text-cyan-300" id="priceChange">—</p>
+    </div>
+
+    <!-- Bot Status -->
+    <div class="card mb-8 neon-border">
+      <h2 class="text-2xl font-bold mb-6 text-cyan-300 flex items-center gap-3 animate-fade-in">
         <i class="fas fa-robot pulse text-cyan-400"></i> Bot Status & Stats
       </h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="stat-card">
+        <div class="stat-card animate-fade-in" style="animation-delay: 0.3s;">
           <p class="text-3xl font-bold" id="botOnline">Loading...</p>
-          <p class="text-blue-300 text-sm mt-1">Bot Status</p>
+          <p class="text-cyan-200 text-sm mt-1">Bot Status</p>
         </div>
-        <div class="stat-card">
+        <div class="stat-card animate-fade-in" style="animation-delay: 0.4s;">
           <p class="text-3xl font-bold text-cyan-400" id="botUptime">0h 0m</p>
-          <p class="text-blue-300 text-sm mt-1">Uptime</p>
+          <p class="text-cyan-200 text-sm mt-1">Uptime</p>
         </div>
-        <div class="stat-card">
+        <div class="stat-card animate-fade-in" style="animation-delay: 0.5s;">
           <p class="text-3xl font-bold text-purple-400" id="totalWallets">0</p>
-          <p class="text-blue-300 text-sm mt-1">Tracked Wallets</p>
+          <p class="text-cyan-200 text-sm mt-1">Tracked Wallets</p>
         </div>
       </div>
-      <p class="text-xs text-blue-300 mt-4 text-right" id="lastPing">Last ping: never</p>
+      <p class="text-xs text-cyan-200 mt-4 text-right animate-fade-in" id="lastPing" style="animation-delay: 0.6s;">Last ping: never</p>
     </div>
 
-    <!-- Add Address Form -->
-    <div class="card mb-8">
-      <h2 class="text-2xl font-bold mb-6 text-green-400 flex items-center gap-3">
-        <i class="fas fa-plus-circle"></i> Track New Address
+    <!-- Network Stats -->
+    <div class="card mb-8 neon-border">
+      <h2 class="text-2xl font-bold mb-6 text-purple-400 flex items-center gap-3 animate-fade-in">
+        <i class="fas fa-network-wired"></i> Litecoin Network
       </h2>
-      <form id="addForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="network-stats">
+        <div class="network-stat">
+          <p class="text-lg font-bold" id="blockHeight">—</p>
+          <p class="text-xs text-cyan-300">Block Height</p>
+        </div>
+        <div class="network-stat">
+          <p class="text-lg font-bold" id="hashRate">—</p>
+          <p class="text-xs text-cyan-300">Hash Rate</p>
+        </div>
+        <div class="network-stat">
+          <p class="text-lg font-bold" id="difficulty">—</p>
+          <p class="text-xs text-cyan-300">Difficulty</p>
+        </div>
+        <div class="network-stat">
+          <p class="text-lg font-bold" id="mempool">—</p>
+          <p class="text-xs text-cyan-300">Mempool TXs</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Address -->
+    <div class="card mb-8 neon-border">
+      <h2 class="text-2xl font-bold mb-6 text-green-400 flex items-center gap-3 animate-fade-in">
+        <i class="fas fa-plus-circle pulse"></i> Track New Address
+      </h2>
+      <form id="addForm" class="grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-in" style="animation-delay: 0.7s;">
         <input type="text" id="address" placeholder="L... or ltc1..." class="input md:col-span-2" required />
         <input type="text" id="label" placeholder="Label (optional)" class="input" />
         <input type="number" step="0.001" id="min" placeholder="Min Alert (LTC)" class="input" value="0.01" />
-        <button type="submit" class="btn btn-primary md:col-start-4">Add</button>
+        <button type="submit" class="btn btn-primary md:col-start-4 flex items-center justify-center gap-2">
+          <i class="fas fa-sparkles"></i> Add
+        </button>
       </form>
-      <p id="addStatus" class="mt-3 text-sm"></p>
+      <p id="addStatus" class="mt-3 text-sm text-center"></p>
     </div>
 
-    <!-- Monitored Addresses -->
-    <div class="card mb-8">
-      <h2 class="text-2xl font-bold mb-6 text-orange-400 flex items-center gap-3">
+    <!-- Addresses -->
+    <div class="card mb-8 neon-border">
+      <h2 class="text-2xl font-bold mb-6 text-orange-400 flex items-center gap-3 animate-fade-in">
         <i class="fas fa-wallet"></i> Monitored Addresses
       </h2>
       <div id="addressesList" class="space-y-4">
-        <p class="text-center text-blue-300">Loading addresses...</p>
+        <p class="text-center text-cyan-200 animate-pulse">Loading addresses...</p>
       </div>
     </div>
 
-    <!-- Latest Transactions -->
-    <div class="card">
-      <h2 class="text-2xl font-bold mb-6 text-yellow-400 flex items-center gap-3">
+    <!-- Transactions -->
+    <div class="card neon-border">
+      <h2 class="text-2xl font-bold mb-6 text-yellow-400 flex items-center gap-3 animate-fade-in">
         <i class="fas fa-exchange-alt"></i> Latest Transactions
       </h2>
       <div id="txList" class="space-y-4">
-        <p class="text-center text-blue-300">No transactions yet.</p>
+        <p class="text-center text-cyan-200 animate-pulse">No transactions yet.</p>
       </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>© 2025 Vortex LTC Tracker • Made in Nepal <span class="text-red-500">❤️</span></p>
+      <p class="text-xs mt-2">Powered by Chain.so • Supabase • Vercel</p>
+    </footer>
 
   </div>
 
   <script>
+    // Sparkles
+    document.addEventListener('click', (e) => {
+      const sparkle = document.createElement('div');
+      sparkle.className = 'sparkle';
+      sparkle.style.left = `${e.clientX}px`;
+      sparkle.style.top = `${e.clientY}px`;
+      document.body.appendChild(sparkle);
+      setTimeout(() => sparkle.remove(), 1500);
+    });
+
     const addForm = document.getElementById('addForm');
     const addStatus = document.getElementById('addStatus');
     const addressesList = document.getElementById('addressesList');
     const txList = document.getElementById('txList');
+
+    // LTC Price
+    async function loadLTCPrice() {
+      try {
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=litecoin&vs_currencies=usd&include_24hr_change=true');
+        const data = await res.json();
+        const price = data.litecoin.usd;
+        const change = data.litecoin.usd_24h_change.toFixed(2);
+        document.getElementById('ltcPrice').textContent = `$${price.toLocaleString()}`;
+        const changeEl = document.getElementById('priceChange');
+        changeEl.textContent = `${change > 0 ? '+' : ''}${change}% (24h)`;
+        changeEl.className = change > 0 ? 'text-green-400' : 'text-red-400';
+      } catch (e) {
+        document.getElementById('ltcPrice').textContent = 'Price API down';
+      }
+    }
+
+    // Network Stats
+    async function loadNetworkStats() {
+      try {
+        const res = await fetch('https://chain.so/api/v3/info/LTC');
+        const data = await res.json().data;
+        document.getElementById('blockHeight').textContent = data.blocks.toLocaleString();
+        document.getElementById('hashRate').textContent = (data.hashrate / 1e12).toFixed(2) + ' TH/s';
+        document.getElementById('difficulty').textContent = data.difficulty.toLocaleString();
+        document.getElementById('mempool').textContent = data.mempool_txs.toLocaleString();
+      } catch (e) {
+        document.getElementById('blockHeight').textContent = '—';
+      }
+    }
 
     async function loadBotStatus() {
       try {
@@ -114,9 +266,7 @@
           const s = data[0];
           const onlineEl = document.getElementById('botOnline');
           onlineEl.textContent = s.is_running ? 'ONLINE' : 'OFFLINE';
-          onlineEl.className = s.is_running 
-            ? 'text-3xl font-bold text-green-400' 
-            : 'text-3xl font-bold text-red-400';
+          onlineEl.className = s.is_running ? 'text-3xl font-bold text-green-400' : 'text-3xl font-bold text-red-400';
           document.getElementById('botUptime').textContent = s.uptime || '0h 0m';
           document.getElementById('totalWallets').textContent = s.wallet_count || 0;
           document.getElementById('lastPing').textContent = `Last ping: ${formatTime(s.last_ping)}`;
@@ -129,17 +279,17 @@
         const res = await fetch('/api/wallets');
         const wallets = await res.json();
         addressesList.innerHTML = wallets.length === 0 
-          ? '<p class="text-center text-blue-300">No addresses tracked. Add one above.</p>'
+          ? '<p class="text-center text-cyan-200">No addresses tracked. Add one above.</p>'
           : wallets.map(w => `
             <div class="address-card">
               <div>
                 <p class="font-bold text-cyan-300">${escape(w.label)}</p>
                 <code class="break-all">${w.address}</code>
-                <span class="text-xs text-blue-400 ml-2">(Alert ≥ ${w.alert_min} LTC)</span>
+                <span class="text-xs text-blue-300 ml-2">(Alert ≥ ${w.alert_min} LTC)</span>
               </div>
               <div class="text-right">
                 <p class="text-2xl font-bold text-green-400">${w.balance?.toFixed(4) || '0.0000'} LTC</p>
-                <p class="text-sm text-blue-300">by @${escape(w.username || 'Anon')}</p>
+                <p class="text-sm text-cyan-200">by @${escape(w.username || 'Anon')}</p>
               </div>
             </div>
           `).join('');
@@ -153,12 +303,12 @@
         const res = await fetch('/api/transactions');
         const txs = await res.json();
         txList.innerHTML = txs.length === 0 
-          ? '<p class="text-center text-blue-300">No transactions yet.</p>'
+          ? '<p class="text-center text-cyan-200">No transactions yet.</p>'
           : txs.map(t => `
             <div class="tx-card">
               <div class="flex justify-between items-center">
                 <p class="text-xl font-bold text-yellow-400">+${t.amount} LTC</p>
-                <p class="text-sm text-blue-300">${formatTime(t.timestamp)}</p>
+                <p class="text-sm text-cyan-200">${formatTime(t.timestamp)}</p>
               </div>
               <p class="text-sm"><strong>From:</strong> <code>${t.from_addr?.slice(0,12)}...</code></p>
               <p class="text-sm"><strong>To:</strong> <code>${t.address.slice(0,12)}...</code></p>
@@ -176,7 +326,7 @@
     addForm.onsubmit = async (e) => {
       e.preventDefault();
       addStatus.textContent = "Adding...";
-      addStatus.className = "mt-3 text-sm text-yellow-400";
+      addStatus.className = "mt-3 text-sm text-yellow-400 animate-pulse";
       const payload = {
         address: document.getElementById('address').value.trim(),
         label: document.getElementById('label').value || "Unnamed",
@@ -219,12 +369,16 @@
       loadBotStatus();
       loadAddresses();
       loadTransactions();
+      loadLTCPrice();
+      loadNetworkStats();
     }, 15000);
 
     // Initial Load
     loadBotStatus();
     loadAddresses();
     loadTransactions();
+    loadLTCPrice();
+    loadNetworkStats();
   </script>
 </body>
 </html>
