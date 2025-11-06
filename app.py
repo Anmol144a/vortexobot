@@ -1,51 +1,77 @@
-# app.py
-import requests
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
-from datetime import datetime
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💫 Vortex Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body { background: #0f0f1a; color: #fff; font-family: 'Inter', sans-serif; }
+.card { background: #1a1a2e; padding: 1.5rem; border-radius: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #333; }
+th { font-weight: bold; }
+a { color: #4f46e5; text-decoration: none; }
+a:hover { text-decoration: underline; }
+</style>
+</head>
+<body class="p-6">
+<div class="max-w-6xl mx-auto">
+    <h1 class="text-4xl font-bold mb-6">💫 Vortex Dashboard • Made by Anmol</h1>
 
-app = FastAPI()
-templates = Jinja2Templates(directory=".")
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Wallets -->
+        <div class="card">
+            <h2 class="text-xl font-semibold mb-4">Wallets Tracked</h2>
+            {% if wallets %}
+            <table>
+                <thead>
+                    <tr><th>User</th><th>Label</th><th>Address</th><th>Last Balance</th></tr>
+                </thead>
+                <tbody>
+                    {% for w in wallets %}
+                    <tr>
+                        <td>{{ w['user_id'] }}</td>
+                        <td>{{ w['label'] }}</td>
+                        <td>{{ w['address'] }}</td>
+                        <td>{{ w['last_balance'] or "0" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No wallets tracked yet.</p>
+            {% endif %}
+        </div>
 
-SUPABASE_URL = "https://enciwuvvqhnkkfourhkm.supabase.co"
-SUPABASE_KEY = "sb_publishable_6cA5-fNu24sHcHxENX474Q__oCrovZR"
-HEADERS = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
-
-@app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    wallets = requests.get(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS).json()
-    txs = requests.get(f"{SUPABASE_URL}/rest/v1/transactions?order=id.desc&limit=20", headers=HEADERS).json()
-    return templates.TemplateResponse("index.html", {"request": request, "wallets": wallets, "txs": txs})
-
-@app.post("/api/tx")
-async def receive_tx(data: dict):
-    try:
-        payload = {
-            "txid": data.get("txid"),
-            "address": data.get("address"),
-            "amount": data.get("amount"),
-            "timestamp": data.get("timestamp") or datetime.utcnow().isoformat()
-        }
-        requests.post(f"{SUPABASE_URL}/rest/v1/transactions", headers=HEADERS, json=payload)
-        address = data.get("address")
-        label = data.get("label") or "unknown"
-        r = requests.get(f"{SUPABASE_URL}/rest/v1/wallets?address=eq.{address}", headers=HEADERS).json()
-        if r:
-            requests.patch(f"{SUPABASE_URL}/rest/v1/wallets?address=eq.{address}", headers=HEADERS,
-                           json={"last_balance": data.get("amount")})
-        else:
-            requests.post(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS,
-                          json={"user_id": "unknown", "label": label, "address": address, "last_balance": data.get("amount")})
-        return JSONResponse({"status": "ok"})
-    except Exception as e:
-        return JSONResponse({"status": "error", "error": str(e)})
-
-@app.post("/add_wallet")
-async def add_wallet(user_id: str = Form(...), label: str = Form(...), address: str = Form(...)):
-    try:
-        requests.post(f"{SUPABASE_URL}/rest/v1/wallets", headers=HEADERS,
-                      json={"user_id": user_id, "label": label, "address": address, "last_balance": "0"})
-        return JSONResponse({"status": "ok"})
-    except Exception as e:
-        return JSONResponse({"status": "error", "error": str(e)})
+        <!-- Transactions -->
+        <div class="card">
+            <h2 class="text-xl font-semibold mb-4">Recent Transactions</h2>
+            {% if txs %}
+            <table>
+                <thead>
+                    <tr><th>TxID</th><th>Address</th><th>Amount</th><th>Time</th></tr>
+                </thead>
+                <tbody>
+                    {% for tx in txs %}
+                    <tr>
+                        <td>
+                            <a href="https://blockchair.com/litecoin/transaction/{{ tx['txid'] }}" target="_blank">
+                                {{ tx['txid'][:10] }}...
+                            </a>
+                        </td>
+                        <td>{{ tx['address'] }}</td>
+                        <td>{{ tx['amount'] }}</td>
+                        <td>{{ tx['timestamp'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No recent transactions yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+</body>
+</html>
